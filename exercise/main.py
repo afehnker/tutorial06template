@@ -3,6 +3,7 @@ import sys
 from exercise.helpers.keyboard_handler import KeyboardHandler
 from exercise.maze import Maze
 from exercise.helpers.constants import Constants
+from exercise.search import Search
 
 
 class Game:
@@ -16,11 +17,10 @@ class Game:
         self.screen = pygame.display.set_mode(self.size)
         self.keyboard_handler = KeyboardHandler()
         self.font = pygame.font.SysFont(pygame.font.get_fonts()[0], 64)
-        self.maze = Maze(Constants.GRID_SIZE, Constants.GRID_SIZE, self.size)
-
         self.time = pygame.time.get_ticks()
-
+        self.maze = Maze(Constants.GRID_COLS, Constants.GRID_ROWS, self.size)
         self.maze.generate_maze()
+        self.search = Search(self.maze)
 
     """
     Method 'game_loop' will be executed every frame to drive
@@ -35,7 +35,6 @@ class Game:
         self.handle_events()
         self.update_game(delta_time)
         self.draw_components()
-
     """
     Method 'update_game' is there to update the state of variables 
     and objects from frame to frame.
@@ -55,7 +54,7 @@ class Game:
         pygame.display.flip()
 
     def draw_score(self):
-        text = self.font.render(str(self.score[0]) + ":" + str(self.score[1]), True, (255,255,255))
+        text = self.font.render(str(self.maze.target.distance), True, (0,0,0))
         self.screen.blit(text, (self.size[0]/2-64, 20))
 
     def reset(self):
@@ -88,41 +87,33 @@ class Game:
     """
     def handle_key_down(self, event):
         self.keyboard_handler.key_pressed(event.key)
+        if event.key == pygame.K_m:
+            print("Generating Maze")
+            self.maze.generate_maze()
+        if event.key == pygame.K_o:
+            print("Generating Obstacle")
+            self.maze.generate_obstacles()
+        if event.key == pygame.K_r:
+            print("Generating Rooms")
+            self.maze.generate_room()
+        if event.key == pygame.K_b:
+            print("BFS")
+            self.search.breadth_first_solution()
+        if event.key == pygame.K_d:
+            print("DFS")
+            self.search.depth_first_solution()
+
+
 
     """
     This method will remove a released button 
     from list 'keyboard_handler.pressed'.
     """
-    #TODO: Clean this up!
+
     def handle_key_up(self, event):
         self.keyboard_handler.key_released(event.key)
-        if event.key == pygame.K_m:
-            print("Generating Maze")
-            self.maze.generate_maze()
-        if event.key == pygame.K_e:
-            print("Generating empty space")
-            self.maze.open_maze()
-        if event.key == pygame.K_o:
-            print("Generating obstacles")
-            self.maze.generate_obstacles()
-        if event.key == pygame.K_r:
-            print("Generating rooms")
-            self.maze.generate_room()
-        if event.key == pygame.K_b:
-            print("Breath solve")
-            self.maze.breadth_first_solution()
-        if event.key == pygame.K_x:
-            print("Depth solve recusively")
-            self.maze.depth_first_recursive()
-        if event.key == pygame.K_d:
-            print("Depth solve")
-            self.maze.depth_first_solution()
-        if event.key == pygame.K_g:
-            print("Greedy solve")
-            self.maze.greedy_search()
-        if event.key == pygame.K_a:
-            print("A* solve")
-            self.maze.a_star_search()
+
+
 
     """
     Similar to void mouseMoved() in Processing
@@ -134,7 +125,12 @@ class Game:
     Similar to void mousePressed() in Processing
     """
     def handle_mouse_pressed(self, event):
-        pass
+        x = int(event.pos[0] / self.maze.cell_width)
+        y = int(event.pos[1] / self.maze.cell_height)
+        if event.button==1:
+            self.maze.set_source(self.maze.grid[x][y])
+        if event.button == 3:
+            self.maze.set_target(self.maze.grid[x][y])
 
     """
     Similar to void mouseReleased() in Processing

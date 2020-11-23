@@ -1,9 +1,7 @@
-from functools import total_ordering
-from pygame import draw
-from exercise.helpers.directions import Direction
+from pygame import draw, font
 
+import sys
 
-@total_ordering
 class GridElement:
     """
     GridElement used as a tile in the exercise
@@ -15,17 +13,12 @@ class GridElement:
 
     def __init__(self, x, y, size):
         self.position = (x, y)
-        self.neighbours = [None, None, None, None]
-        self.walls = [True, True, True, True]
-        self.generate_walls()
-        self.is_visited = False
-        self.is_seen = False
-        self.is_marked = False
+        self.neighbours = []
         self.size = (size[0], size[1])
         self.parent = None
-        self.fscore = 0
-        self.gscore = 999999
-        self.score = self.fscore + self.gscore
+        self.distance = None
+        self.score = None
+        self.color = (255, 255, 255)
 
     """
     Overload the equals operator
@@ -33,16 +26,18 @@ class GridElement:
 
     def __eq__(self, other):
         return self.position == other.position
-
-
     """
     Overload the less than operator
     """
 
     def __lt__(self, other):
-        return self.score < other.score
+        return (self.score is not None) and (other.score is None or self.score < other.score)
 
-
+    """
+       Overload the hash operator
+    """
+    def __hash__(self):
+        return hash(self.position)
     """
     Overload the string representation of the object
     """
@@ -50,52 +45,25 @@ class GridElement:
     def __repr__(self):
         return "[%s, %s]" % (self.position, self.score)
 
-
-
     """
-    Set a wall in all directions
-    """
-
-    def generate_walls(self):
-        for direction in Direction:
-            self.walls[direction.value] = True
-
-    """
-    Set the neighbours in all directions to None
+    Remove all neighbours
     """
 
     def reset_neighbours(self):
-        for direction in Direction:
-            self.neighbours[direction.value] = None
-
-    """
-    Sets all but the neighbours value back to their starting value
-    """
-
-    def reset(self):
-        self.generate_walls()
-        self.reset_state()
+        self.neighbours = []
 
     """
     Sets the state of the GridElement 
     """
 
     def reset_state(self):
-        self.is_marked = False
-        self.is_visited = False
-        self.is_seen = False
         self.parent = None
-        self.fscore = 0
-        self.score = self.fscore + self.gscore
+        self.score = None
+        self.distance = None
+        self.color = (255, 255, 255)
 
-    def unvisited_neighbours(self):
-        neighbors = []
-        for direction in Direction:
-            next_element = self.neighbours[direction]
-            if next_element is not None:
-                if not next_element.is_visited and not self.walls[direction]:
-                    neighbors.append(next_element)
-        return neighbors
+    def get_neighbours(self):
+        return self.neighbours
 
     """
      Method to calculate the Manhattan distance from a certain 
@@ -107,57 +75,28 @@ class GridElement:
         y_distance = abs(self.position[1] - other.position[1])
         return x_distance + y_distance
 
+    def null_distance(self, other):
+        x_distance = abs(self.position[0] - other.position[0])
+        y_distance = abs(self.position[1] - other.position[1])
+        return max(x_distance ,y_distance)
+
+    def direction(self, other):
+        return other.position[0] - self.position[0], other.position[1] - self.position[1]
+
     def set_score(self, score):
         self.score = score
 
-    def update_gscore(self, target):
-        self.gscore = self.manhattan_distance(target)
-        self.score = self.fscore + self.gscore
+    def set_distance(self, distance):
+        self.distance = distance
 
-    def update_fscore(self, fscore):
-        self.fscore = fscore
-        self.score = self.fscore + self.gscore
+    def get_distance(self):
+        return self.distance
 
-    def update_score(self):
-        self.score = self.fscore + self.gscore
-
-    """
-    Remove the wall in a given direction while 
-    also removing the wall in the adjacent neighour GridElement  
-    """
-
-    def remove_wall(self, direction):
-        if self.neighbours[direction] is not None:
-            self.walls[direction] = False
-            self.neighbours[direction].walls[(direction + 2) % 4] = False
-            # self.print_walls()
-            # self.neighbours[direction].print_walls()
-
-    def add_wall(self, direction):
-        if self.neighbours[direction] is not None:
-            self.walls[direction] = True
-            self.neighbours[direction].walls[(direction + 2) % 4] = True
-            # self.print_walls()
-            # self.neighbours[direction].print_walls()
-
-    def print_walls(self):
-        print(self.position)
-        for identifier, walls in enumerate(self.walls):
-            print(Direction(identifier), self.walls[Direction(identifier)])
-
-    # TODO: Pythonify this!
-    """
-    Returns position
-    """
+    def get_score(self, score):
+        return self.score
 
     def get_position(self):
         return self.position
-
-    def get_position_x(self):
-        return self.position[0]
-
-    def get_position_y(self):
-        return self.position[1]
 
     """
     Assign the GridElement used to reach this GridElement
@@ -165,35 +104,86 @@ class GridElement:
 
     def set_parent(self, parent):
         self.parent = parent
+        if parent.distance is not None:
+            self.distance = parent.distance+1
+
+    def set_color(self, color):
+        self.color = color
 
     """
     Draw the GridElement
     """
 
     def draw_grid_element(self, surface):
-        if self.is_visited or self.is_seen:
-            draw.rect(surface, (200, 200, 200),
-                      (self.position[0] * self.size[0], self.position[1] * self.size[1], self.size[0], self.size[1]), 0)
-        if self.is_marked:
-            draw.circle(surface, (0, 255, 0), ((int(self.position[0] * self.size[0] + self.size[0] / 2)),
-                                               int(self.position[1] * self.size[1] + self.size[0] / 2)),
-                        (int(self.size[0] / 2)), 0)
-        if self.walls[Direction.NORTH] is True:
-            draw.line(surface, (0, 0, 0), (self.position[0] * self.size[0], self.position[1] * self.size[1]),
-                      ((self.position[0] + 1) * self.size[0], self.position[1] * self.size[1]), 2)
-        if self.walls[Direction.EAST] is True:
-            draw.line(surface, (0, 0, 0), ((self.position[0] + 1) * self.size[0], self.position[1] * self.size[1]),
-                      ((self.position[0] + 1) * self.size[0], (self.position[1] + 1) * self.size[1]), 2)
-        if self.walls[Direction.SOUTH] is True:
-            draw.line(surface, (0, 0, 0), (self.position[0] * self.size[0], (self.position[1] + 1) * self.size[1]),
-                      ((self.position[0] + 1) * self.size[0], (self.position[1] + 1) * self.size[1]), 2)
-        if self.walls[Direction.WEST] is True:
-            draw.line(surface, (0, 0, 0), (self.position[0] * self.size[0], self.position[1] * self.size[1]),
-                      (self.position[0] * self.size[0], (self.position[1] + 1) * self.size[1]), 2)
+        draw.rect(surface, self.color,
+                  (self.position[0] * self.size[0], self.position[1] * self.size[1], self.size[0], self.size[1]), 0)
 
-    def print_neighbour_position(self):
-        for identifier, neighbour in enumerate(self.neighbours):
-            if neighbour is None:
-                print(Direction(identifier), "None")
+        # discard the directions where neighbours are
+        compass = {(0, -1), (1, 0), (0, 1), (-1, 0)}  # The four directions
+        for neighbor in self.neighbours:
+            compass.discard(self.direction(neighbor))
+
+        for direction in compass:
+            if direction == (0, -1):  # North
+                draw.line(surface, (0, 0, 0), (self.position[0] * self.size[0], self.position[1] * self.size[1]),
+                          ((self.position[0] + 1) * self.size[0], self.position[1] * self.size[1]), 2)
+            if direction == (1, 0):  # East
+                draw.line(surface, (0, 0, 0), ((self.position[0] + 1) * self.size[0], self.position[1] * self.size[1]),
+                          ((self.position[0] + 1) * self.size[0], (self.position[1] + 1) * self.size[1]), 2)
+            if direction == (0, 1):  # South
+                draw.line(surface, (0, 0, 0), (self.position[0] * self.size[0], (self.position[1] + 1) * self.size[1]),
+                          ((self.position[0] + 1) * self.size[0], (self.position[1] + 1) * self.size[1]), 2)
+            if direction == (-1, 0):  # West
+                draw.line(surface, (0, 0, 0), (self.position[0] * self.size[0], self.position[1] * self.size[1]),
+                          (self.position[0] * self.size[0], (self.position[1] + 1) * self.size[1]), 2)
+
+        # This draw an arrow to from the parent
+        if self.parent is not None:
+
+            vector = self.direction(self.parent)
+
+            center = ((self.position[0]+0.5) * self.size[0],(self.position[1]+0.5) * self.size[1])
+
+            if vector[0] !=0:
+                left_point = (center[0]+(vector[0]-vector[1])*self.size[0]/5,center[1]+(vector[1]-vector[0])*self.size[0]/5)
+                right_point = (center[0] + (vector[0] - vector[1]) * self.size[0] / 5, center[1] + (vector[1] + vector[0]) * self.size[0] / 5)
             else:
-                print(Direction(identifier), neighbour.get_position())
+                left_point = (center[0] + (vector[0] - vector[1]) * self.size[0] / 5,
+                              center[1] + (vector[1] + vector[0]) * self.size[0] / 5)
+                right_point = (center[0] + (vector[0] + vector[1]) * self.size[0] / 5,
+                               center[1] + (vector[1] + vector[0]) * self.size[0] / 5)
+            draw.polygon(surface, (100,100,100),(center,left_point,right_point))
+            entry_point= (center[0]+vector[0]*self.size[0]/2,center[1]+vector[1]*self.size[1]/2)
+            end_point = (center[0] + vector[0] * self.size[0] / 5, center[1] + vector[1] * self.size[1] / 5)
+            draw.line(surface, (100,100,100),end_point,entry_point,int(self.size[0]/20)+1)
+
+
+    def print_neighbours(self):
+
+        directions = []
+        for neighbor in self.neighbours:
+            if self.direction(neighbor) == (0, -1):  # North
+                directions.append("North")
+            elif self.direction(neighbor) == (1, 0):  # East
+                directions.append("East")
+            elif self.direction(neighbor) == (0, 1):  # South
+                directions.append("South")
+            elif self.direction(neighbor) == (-1, 0):  # West
+                directions.append("West")
+            else:
+                directions.append(self.direction(neighbor))
+
+        print(directions)
+        return None
+
+    def print_walls(self):
+        # discard the directions where neighbours are
+        compass = {(0, -1): "North",
+                   (1, 0): "East",
+                   (0, 1): "South",
+                   (-1, 0): "West"}  # The four directions
+        for neighbor in self.neighbours:
+            compass.pop(self.direction(neighbor))
+
+        print(list(compass.values()))
+        return None
