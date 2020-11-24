@@ -55,6 +55,13 @@ class Search:
         self.highlight_path()
 
     # ADD YOU IMPLEMENTATIONS FOR GREEDY AND ASTAR HERE!
+    def greedy_search(self):
+        pass
+
+    def a_star_search(self):
+        pass
+
+
 
     def highlight_path(self):
         # Compute the path, back to front.
