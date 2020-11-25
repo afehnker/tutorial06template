@@ -28,7 +28,7 @@ class Search:
                             queue.append(next_node)
             else:
                 break
-
+        print("The number of visited nodes is: {}".format(len(visited)))
         self.highlight_path()
 
     def depth_first_solution(self):
@@ -51,7 +51,7 @@ class Search:
                             stack.append(next_node)
             else:
                 break
-
+        print("The number of visited nodes is: {}".format(len(visited)))
         self.highlight_path()
 
     # ADD YOU IMPLEMENTATIONS FOR GREEDY AND ASTAR HERE!
