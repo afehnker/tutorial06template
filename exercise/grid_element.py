@@ -63,7 +63,7 @@ class GridElement:
         self.color = (255, 255, 255)
 
     def get_neighbours(self):
-        return self.neighbours
+        return self.neighbours[:]
 
     """
      Method to calculate the Manhattan distance from a certain 
@@ -119,9 +119,10 @@ class GridElement:
                   (self.position[0] * self.size[0], self.position[1] * self.size[1], self.size[0], self.size[1]), 0)
 
         # discard the directions where neighbours are
-        compass = {(0, -1), (1, 0), (0, 1), (-1, 0)}  # The four directions
-        for neighbor in self.neighbours:
-            compass.discard(self.direction(neighbor))
+        compass = [(0, -1), (1, 0), (0, 1), (-1, 0)]  # The four directions
+        for neighbour in self.neighbours:
+            if self.direction(neighbour) in compass:
+                compass.remove(self.direction(neighbour))
 
         for direction in compass:
             if direction == (0, -1):  # North

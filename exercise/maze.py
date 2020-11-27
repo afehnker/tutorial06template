@@ -3,9 +3,6 @@ from datetime import datetime
 from exercise.grid_element import GridElement
 
 
-
-
-
 class Maze:
     """
         Generates a grid based maze based on GridElements
@@ -24,7 +21,7 @@ class Maze:
             for y in range(grid_size_y):
                 self.grid[x].append(GridElement(x, y, (self.cell_width, self.cell_height)))
         self.start = self.grid[0][0]
-        self.target= self.grid[-1][-1]
+        self.target = self.grid[-1][-1]
         self.reset_all()
         random.seed(datetime.now())
 
@@ -83,14 +80,14 @@ class Maze:
             neighbours.append(self.grid[cell.position[0]][cell.position[1] - 1])
         return neighbours
 
-    def del_link(self,cell1, cell2):
+    def del_link(self, cell1, cell2):
         if cell2 in cell1.neighbours:
             cell1.neighbours.remove(cell2)
         if cell1 in cell2.neighbours:
             cell2.neighbours.remove(cell1)
         return None
 
-    def add_link(self,cell1, cell2):
+    def add_link(self, cell1, cell2):
         if cell1.manhattan_distance(cell2) == 1:
             cell1.neighbours.append(cell2)
             cell2.neighbours.append(cell1)
